@@ -1,4 +1,4 @@
-# Anshumat-Foundation-Assignment
+# Coupon Management
 
 ## 📌 Project Overview
 This project implements a full Coupon Management System.  
@@ -50,7 +50,9 @@ Takes **user** + **cart** input and returns the best applicable coupon.
 - Express.js  
 - SQLite (SQL queries)  
 - Railway for deployment  
-- JavaScript  
+- JavaScript
+
+Here, the deployment is done with Raillway, where it is just using a database.db file, along with the code, for implementing the database. With, every new deployment, this file gets wiped and a new file is created.
 
 ---
 
@@ -211,7 +213,34 @@ Example:
 - Get best coupon:  
   `https://anshumat-foundation-assignment-production.up.railway.app/api/bestCoupons`
 
-The json body stays the same
+The json body stays the same here for these two.
+
+If you want to check the get all coupons api then it is here like this
+
+**Endpoint:**  
+`GET http://anshumat-foundation-assignment-production.up.railway.app/api/coupons`
+
+If you want to increment the number of times of the given user with the given coupon, then use the following endpoint
+
+**Endpoint**
+`POST https://anshumat-foundation-assignment-production.up.railway.app/api/increment-usage`
+
+With the following json body:
+
+```json
+{
+  "userId": 1,
+  "couponId": 1
+}
+```
+Remember, here the couponId should be correct.
+
+**sample output***
+```json
+{
+  "message": "Coupon usage incremented successfully"
+}
+```
 
 ---
 
@@ -222,7 +251,7 @@ AI was used for:
 - Fixing Node version mismatch, module rebuild, and debugging during deployment
 - Understanding that Railway will embed the local `.db` file along with the code
 - Understanding implemention and usage of SQLite with Express
-- Designing DB schema according to problem statement complexity 
+- Checking and imrpoving DB schema according to problem statement complexity 
 - Refining the presentation of the final readme document
 
 ---
