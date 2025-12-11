@@ -56,6 +56,9 @@ Takes **user** + **cart** input and returns the best applicable coupon.
 
 ## 🚀 How to Run Locally
 
+Demo Vido Link:
+**https://drive.google.com/file/d/1sCfaXzlHHWeB5Jyt0SMKfAYaAyWRQY6N/view?usp=sharing**
+
 ### 1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/SidheshwarSarangal/Anshumat-Foundation-Assignment.git
@@ -101,7 +104,7 @@ Backend URL:
 **Sample Request Body**
 ```json
 {
-  "code": "REGULAR1000",
+  "code": "REGULAR5555",
   "description": "50 off for regular users on electronics and fashion",
   "discountType": "FLAT",
   "discountValue": 50,
@@ -216,10 +219,11 @@ The json body stays the same
 AI was used for:
 
 - Understanding deployment errors on Railway (especially SQLite native module build issues)
-- Implementing SQLite with Express (first-time experience)
-- Designing DB schema according to problem statement complexity
-- Fixing Node version mismatch, module rebuild, and debugging
-- Understanding that Railway can embed the local `.db` file along with the code
+- Fixing Node version mismatch, module rebuild, and debugging during deployment
+- Understanding that Railway will embed the local `.db` file along with the code
+- Understanding implemention and usage of SQLite with Express
+- Designing DB schema according to problem statement complexity 
+- Refining the presentation of the final readme document
 
 ---
 
