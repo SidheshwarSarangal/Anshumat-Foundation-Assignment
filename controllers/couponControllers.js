@@ -1,9 +1,9 @@
-// src/controllers/couponController.js
 import db from "../src/db.js";
 
-// Helper to convert arrays to JSON strings
+//function to stringify
 const arrayToJson = (arr) => (arr ? JSON.stringify(arr) : null);
 
+//create coupon controller
 export const createCoupon = (req, res) => {
   try {
     const {
@@ -19,16 +19,17 @@ export const createCoupon = (req, res) => {
       cartEligibility = {},
     } = req.body;
 
-    // 1. Validate required fields
+    // ensuring these fields are present
     if (!code || !discountType || !discountValue || !startDate || !endDate) {
       return res.status(400).json({ error: "Missing required fields." });
     }
 
+    //what type of discount
     if (!["FLAT", "PERCENT"].includes(discountType)) {
       return res.status(400).json({ error: "Invalid discountType." });
     }
 
-    // 2. Check for duplicate coupon code
+    //check for duplicate coupon code
     const existingCoupon = db
       .prepare("SELECT * FROM coupons WHERE code = ?")
       .get(code);
@@ -39,7 +40,7 @@ export const createCoupon = (req, res) => {
         .json({ error: "Coupon code already exists. Use a unique code." });
     }
 
-    // 3. Insert into coupons table (all columns)
+    //insert into coupons table
     const result = db
       .prepare(
         `INSERT INTO coupons 
@@ -55,12 +56,12 @@ export const createCoupon = (req, res) => {
         startDate,
         endDate,
         usageLimitPerUser || null,
-        JSON.stringify(eligibility) // storing full eligibility JSON for reference
+        JSON.stringify(eligibility)
       );
 
     const couponId = result.lastInsertRowid;
 
-    // 4. Insert into coupon_user_attributes (all columns)
+    //insert into coupon_user_attributes
     db.prepare(
       `INSERT INTO coupon_user_attributes
       (coupon_id, allowedUserTiers, minLifetimeSpend, minOrdersPlaced, firstOrderOnly, allowedCountries)
@@ -74,7 +75,7 @@ export const createCoupon = (req, res) => {
       arrayToJson(eligibility.allowedCountries)
     );
 
-    // 5. Insert into coupon_cart_attributes (all columns)
+    //Insert into coupon_cart_attributes
     db.prepare(
       `INSERT INTO coupon_cart_attributes
       (coupon_id, minCartValue, applicableCategories, excludedCategories, minItemsCount)
@@ -87,7 +88,7 @@ export const createCoupon = (req, res) => {
       cartEligibility.minItemsCount || null
     );
 
-    // 6. Return success response
+    //return success response
     res.status(201).json({
       message: "Coupon created successfully",
       couponId,
@@ -98,15 +99,13 @@ export const createCoupon = (req, res) => {
   }
 };
 
-
-
-// New controller: Get all coupons
+//get all coupons controller
 export const getAllCoupons = (req, res) => {
   try {
-    // Fetch all coupons
+    //fetch all coupons
     const coupons = db.prepare("SELECT * FROM coupons").all();
 
-    // Optionally, fetch eligibility details per coupon
+    // fetch eligibility(coupon and cart) details per coupon
     const couponsWithDetails = coupons.map((coupon) => {
       const userAttrs = db
         .prepare("SELECT * FROM coupon_user_attributes WHERE coupon_id = ?")
@@ -130,44 +129,60 @@ export const getAllCoupons = (req, res) => {
   }
 };
 
-
-
-// Compute cartValue from items
+//calculate total cart value
 const computeCartValue = (items) =>
   items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
+//best coupon controller for the given user with the given cart items
 export const getBestCoupon = (req, res) => {
   try {
     const { user, cart } = req.body;
 
+    //initial check if user and cart are present in the request
     if (!user || !cart || !Array.isArray(cart.items)) {
       return res
         .status(400)
         .json({ error: "Invalid payload. Provide user and cart data." });
     }
 
-    const cartValue = computeCartValue(cart.items);
+    const cartValue = computeCartValue(cart.items); //calculating the total cart value
+    const now = new Date(); //date
+    const coupons = db.prepare("SELECT * FROM coupons").all(); //fetching all the coupons
+    let eligibleCoupons = []; //for storing the relevent coupons after filtering
 
-    const now = new Date();
-    const coupons = db.prepare("SELECT * FROM coupons").all();
-
-    let eligibleCoupons = [];
-
+    //loop over all the coupons in order to filter the appropriate ones
     for (const coupon of coupons) {
+      //getting details of user and cart attributes for this particular coupon
       const userAttr = db
         .prepare("SELECT * FROM coupon_user_attributes WHERE coupon_id = ?")
         .get(coupon.id);
-
       const cartAttr = db
         .prepare("SELECT * FROM coupon_cart_attributes WHERE coupon_id = ?")
         .get(coupon.id);
 
-      // ---- 1. Check coupon date validity ----
+      //check coupon date validity
       if (now < new Date(coupon.startDate) || now > new Date(coupon.endDate)) {
         continue;
       }
 
-      // ---- 2. Check user attribute eligibility ----
+      //it helps in computing the usageLimitPerCoupon
+      //if the timeused exceeded the usagelimit of the given coupon, then that coupon will not be considered
+      //we use user_coupon_uasge table for this
+      if (coupon.usageLimitPerUser) {
+        const usageRow = db
+          .prepare(
+            "SELECT timesUsed FROM user_coupon_usage WHERE coupon_id = ? AND user_id = ?"
+          )
+          .get(coupon.id, user.userId);
+
+        const timesUsed = usageRow?.timesUsed || 0;
+
+        if (timesUsed >= coupon.usageLimitPerUser) {
+          continue; // skip this coupon
+        }
+      }
+
+      //check user attribute eligibility
       if (userAttr) {
         if (
           userAttr.allowedUserTiers &&
@@ -196,7 +211,7 @@ export const getBestCoupon = (req, res) => {
         if (userAttr.firstOrderOnly && user.ordersPlaced > 0) continue;
       }
 
-      // ---- 3. Check cart attribute eligibility ----
+      //check cart attribute eligibility
       if (cartAttr) {
         if (cartAttr.minCartValue && cartValue < cartAttr.minCartValue)
           continue;
@@ -222,7 +237,7 @@ export const getBestCoupon = (req, res) => {
         }
       }
 
-      // ---- 4. Compute discount ----
+      //calculate discount
       let discount = 0;
       if (coupon.discountType === "FLAT") {
         discount = coupon.discountValue;
@@ -239,14 +254,14 @@ export const getBestCoupon = (req, res) => {
       });
     }
 
-    // ---- 5. Choose best coupon ----
+    //choosing the best coupon ----
     if (eligibleCoupons.length === 0)
       return res.json({ bestCoupon: null, discount: 0 });
 
-    // Sort by:
-    // 1. Highest discount
-    // 2. Earliest end date
-    // 3. Lexicographical code
+    // Sort by-
+    // 1. highest discount
+    // 2. earliest end date
+    // 3. lexicographical code
     eligibleCoupons.sort((a, b) => {
       if (b.discountAmount !== a.discountAmount)
         return b.discountAmount - a.discountAmount;
@@ -264,6 +279,32 @@ export const getBestCoupon = (req, res) => {
         discount: best.discountAmount,
       },
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+//user_coupon_usage table is used to keep record of how many times a user has used a particular coupon
+//the following controller will be used when the user has selected the best coupon, and then incrementation will be done in this table
+//if the user selects the best coupon, then there will be an increment in the value timeUsed in the table with the given couponid and userid
+//this has to be done manually after getting the best coupon
+export const incrementCouponUsage = (req, res) => {
+  try {
+    const { userId, couponId } = req.body;
+
+    if (!userId || !couponId) {
+      return res
+        .status(400)
+        .json({ error: "userId and couponId are required" });
+    }
+
+    db.prepare(
+      `INSERT INTO user_coupon_usage (coupon_id, user_id, timesUsed) VALUES (?, ?, 1)
+       ON CONFLICT(coupon_id, user_id) DO UPDATE SET timesUsed = timesUsed + 1`
+    ).run(couponId, userId);
+
+    res.json({ message: "Coupon usage incremented successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
