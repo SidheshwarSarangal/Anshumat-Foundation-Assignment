@@ -6,4 +6,4 @@
 *.db
 *.sqlite
 *.sqlite3
-/data/*database.db
+*database.db
