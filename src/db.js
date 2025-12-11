@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 //environment variables 
 dotenv.config({ quiet: true }); 
 
-const db = new Database(process.env.DB_FILE);
+const db = new Database(process.env.DB_FILE || "./database.db");
 
 //creating the tables if are not already present
 //coupons table

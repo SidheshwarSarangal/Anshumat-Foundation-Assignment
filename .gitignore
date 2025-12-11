@@ -1,9 +1,4 @@
-
-# Env files
-.env
-
-# SQLite database files
-*.db
+database.db
 *.sqlite
 *.sqlite3
-*database.db
+.env
