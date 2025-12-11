@@ -1,6 +1,7 @@
 import express from "express";
 import db from "./db.js";
 import dotenv from "dotenv";
+import couponRoutes from "../routes/coupanRoutes.js";
 
 dotenv.config();
 
@@ -14,6 +15,8 @@ try {
 } catch (err) {
   console.error("DB ERROR:", err.message);
 }
+
+app.use("/api", couponRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
