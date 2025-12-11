@@ -101,7 +101,7 @@ Backend URL:
 **Sample Request Body**
 ```json
 {
-  "code": "REGULAR20",
+  "code": "REGULAR1000",
   "description": "50 off for regular users on electronics and fashion",
   "discountType": "FLAT",
   "discountValue": 50,
