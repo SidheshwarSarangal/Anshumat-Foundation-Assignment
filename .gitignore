@@ -2,4 +2,6 @@
 # Env files
 .env
 
-./data/database.db
+
+
+*./data/database.db
