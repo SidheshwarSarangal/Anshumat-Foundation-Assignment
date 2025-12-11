@@ -326,5 +326,36 @@ AI was used for:
 - Checking and imrpoving DB schema according to problem statement complexity 
 - Refining the presentation of the final readme document
 
+### 📌 Prompts Used
+
+1. **Railway Deployment & SQLite Issues**
+   - “Railway keeps throwing this error: `better_sqlite3.node was compiled against NODE_MODULE_VERSION 115 but the current Node version requires 127`.  
+     I already deleted node_modules and reinstalled but it still fails during deployment.  
+     What EXACT steps should I follow so that better-sqlite3 builds correctly on Railway?”
+
+   - “Railway logs show ‘Application failed to respond’. My server works perfectly on localhost.  
+     Is this because SQLite isn't loading? How do I debug this in a Railway container environment?”
+
+2. **Fixing SQLite Build**
+   - “Give me the correct Dockerfile or environment variables so that Railway installs better-sqlite3 correctly without node-gyp errors.”
+
+   - “Why does better-sqlite3 fail when Node.js version changes? Explain NODE_MODULE_VERSION mismatch and how to rebuild native modules properly.”
+
+3. **Database Schema & Logic**
+   - “Here is my coupon schema. Am I structuring eligibility rules correctly?  
+     Should I store user- and cart-eligibility in separate tables or JSON columns?”
+
+4. **Best Coupon Selection Logic**
+   - “Here is my bestCoupons controller. Why is it returning the wrong coupon? Show me the step-by-step filtering logic.”
+
+5. **Debugging**
+   - “When I run on Railway I get: `Server running at http://localhost:8080` but the public URL still gives 502.  
+     What does this mean? Do I need to bind to 0.0.0.0 or use process.env.PORT?”
+
+6. **Writing the README**
+   - “Rewrite my entire README to be clean, professional, formatted properly, and aligned with the assignment requirements.  
+
+   - “Generate a full technical explanation for each database table in Markdown with proper formatting.”
+
 ---
 
