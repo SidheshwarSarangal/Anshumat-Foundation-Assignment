@@ -1,46 +1,105 @@
-# 🧾 Anshumat Foundation – Coupon Management System
-A complete backend system for creating, managing, and applying discount coupons based on user and cart eligibility rules. Built using Node.js, Express, SQLite and deployed on Railway.
+# Anshumat-Foundation-Assignment
 
-## 🚀 Project Overview
-This project implements a Coupon Management System with:
-- Creating coupons with detailed rules
-- User-based eligibility (tiers, lifetime spend, orders, country, etc.)
-- Cart-based eligibility (cart value, category rules, item count, etc.)
-- Selecting the best coupon for any user & cart
-- Tracking how many times a user used a coupon
-A SQLite file `database.db` stores all data.
+## 📌 Project Overview
+This project implements a full Coupon Management System.  
+Users can create multiple coupons with detailed attributes such as:
 
-## 📡 APIs Implemented
-1. POST /api/createCoupon – Create a coupon  
-2. POST /api/bestCoupons – Get best coupon  
-3. GET /api/coupons – Get all coupons  
-4. POST /api/increment-usage – Increase coupon usage  
+- **discountType**
+- **discountValue**
+- **maxDiscountAmount**
+- **startDate**, **endDate**
+- **usageLimitPerUser**
+- **eligibility** (user-based conditions)
+  - allowedUserTiers
+  - minLifetimeSpend
+  - minOrdersPlaced
+  - firstOrderOnly
+  - allowedCountries
+- **cartEligibility** (cart-based conditions)
+  - minCartValue
+  - applicableCategories
+  - excludedCategories
+  - minItemsCount
+
+Also, users can **search for the best coupon** by providing:
+
+- user details
+- cart details
+
+We also track **coupon usage per user**, ensuring a single user cannot exceed allowed usage limits.
+
+There is one more api for to get all coupons(just for testin purpose).
+
+### Main APIs
+
+#### ✅ Create Coupon API  
+Creates a coupon with fields:  
+`code, description, discountType, discountValue, maxDiscountAmount, startDate, endDate, usageLimitPerUser, eligibility{}, cartEligibility{}`
+
+#### ✅ Best Coupon API  
+Takes **user** + **cart** input and returns the best applicable coupon.
+
+### Extra Utility APIs
+- Get all coupons (testing only)
+- Increment user usage for a coupon
+
+---
 
 ## 🛠 Tech Stack
-Node.js, Express.js, SQLite (better-sqlite3), Railway Deployment
+- Node.js  
+- Express.js  
+- SQLite (SQL queries)  
+- Railway for deployment  
+- JavaScript  
 
-## 🏃 How to Run Locally
-1️⃣ Clone the Repository  
-git clone https://github.com/SidheshwarSarangal/Anshumat-Foundation-Assignment.git  
-2️⃣ Move into Project  
-cd Anshumat-Foundation-Assignment  
-3️⃣ Install Dependencies  
-npm install  
-4️⃣ Start the Server  
-npm run dev  
+---
+
+## 🚀 How to Run Locally
+
+### 1️⃣ Clone the Repository
+```bash
+git clone https://github.com/SidheshwarSarangal/Anshumat-Foundation-Assignment.git
+```
+
+### 2️⃣ Move into Project
+```bash
+cd Anshumat-Foundation-Assignment
+```
+
+### 3️⃣ Install Dependencies
+```bash
+npm install
+```
+
+### 4️⃣ Start the Server
+```bash
+npm run dev
+```
 
 Your server will run at:  
-http://localhost:3000  
+**http://localhost:3000**
+
+---
 
 ## 🌐 Deployed App
+
 Backend URL:  
-https://anshumat-foundation-assignment-production.up.railway.app  
+**https://anshumat-foundation-assignment-production.up.railway.app/**
 
-## 📌 API Testing
+---
 
-### 1. Create Coupon
-POST /api/createCoupon  
-Example Body:
+## 🔥 API Usage & Test Cases
+
+- You can run these in Postman or in ThunderClient.
+
+### 🧩 Create Coupon API
+
+**Endpoint:**  
+`POST http://localhost:3000/api/createCoupon`
+
+
+**Sample Request Body**
+```json
 {
   "code": "REGULAR20",
   "description": "50 off for regular users on electronics and fashion",
@@ -50,6 +109,7 @@ Example Body:
   "startDate": "2025-01-01",
   "endDate": "2025-12-31",
   "usageLimitPerUser": 5,
+
   "eligibility": {
     "allowedUserTiers": ["REGULAR", "GOLD"],
     "minLifetimeSpend": 2000,
@@ -57,6 +117,7 @@ Example Body:
     "firstOrderOnly": false,
     "allowedCountries": ["IN"]
   },
+
   "cartEligibility": {
     "minCartValue": 500,
     "applicableCategories": ["electronics", "fashion"],
@@ -64,16 +125,25 @@ Example Body:
     "minItemsCount": 1
   }
 }
+```
 
-Response:
+**Sample Output**
+```json
 {
   "message": "Coupon created successfully",
   "couponId": 1
 }
+```
 
-### 2. Best Coupon
-POST /api/bestCoupons  
-Example Body:
+---
+
+### Best Coupon API
+
+**Endpoint:**  
+`POST http://localhost:3000/api/bestCoupons`
+
+**Sample Input**
+```json
 {
   "user": {
     "userTier": "REGULAR",
@@ -81,6 +151,7 @@ Example Body:
     "lifetimeSpend": 2500,
     "ordersPlaced": 3
   },
+
   "cart": {
     "items": [
       {
@@ -100,8 +171,10 @@ Example Body:
     ]
   }
 }
+```
 
-Response:
+**Sample Output**
+```json
 {
   "bestCoupon": {
     "id": 1,
@@ -109,25 +182,44 @@ Response:
     "discount": 50
   }
 }
+```
 
-### 3. Get All Coupons
-GET /api/coupons
+---
 
-### 4. Increment Usage
-POST /api/increment-usage  
-Body:
-{
-  "userId": "USER123",
-  "couponId": 1
-}
+### Using Deployed API Instead of Local
 
-## 🤖 AI Usage
-AI helped with:
-- Fixing SQLite deployment issues on Railway  
-- Debugging better-sqlite3 Node version mismatch  
-- Designing SQL schema & relationships  
-- Implementing SQL logic in Express (coming from MongoDB background)  
-- Understanding how to keep a persistent database.db on Railway  
+Just replace:
 
-## ✅ Final Notes
-This backend supports coupon creation, eligibility rules, selection logic, and tracking usage. SQLite ensures easy deployment and persistence. The system works identically in local and production.
+```
+http://localhost:3000
+```
+
+with:
+
+```
+https://anshumat-foundation-assignment-production.up.railway.app
+```
+
+Example:
+
+- Create coupon:  
+  `https://anshumat-foundation-assignment-production.up.railway.app/api/createCoupon`
+
+- Get best coupon:  
+  `https://anshumat-foundation-assignment-production.up.railway.app/api/bestCoupons`
+
+The json body stays the same
+
+---
+
+## AI Usage
+AI was used for:
+
+- Understanding deployment errors on Railway (especially SQLite native module build issues)
+- Implementing SQLite with Express (first-time experience)
+- Designing DB schema according to problem statement complexity
+- Fixing Node version mismatch, module rebuild, and debugging
+- Understanding that Railway can embed the local `.db` file along with the code
+
+---
+
