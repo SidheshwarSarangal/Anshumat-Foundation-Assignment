@@ -1,0 +1,10 @@
+
+# Env files
+.env
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+./data/database.db

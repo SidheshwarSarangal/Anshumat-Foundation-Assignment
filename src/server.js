@@ -1,20 +1,21 @@
 import express from "express";
+import db from "./db.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware to prevent crashes on JSON errors
 app.use(express.json());
-app.use((err, req, res, next) => {
-  console.error("Server error:", err);
-  res.status(500).json({ error: "Internal server error" });
-});
 
-// Sample route
-app.get("/", (req, res) => {
-  res.send("Server is running safely!");
-});
+// TEST DATABASE CONNECTION AUTOMATICALLY ON SERVER START
+try {
+  const row = db.prepare(`SELECT 'SQLite is connected!' AS message`).get();
+  console.log("DB TEST RESULT:", row);
+} catch (err) {
+  console.error("DB ERROR:", err.message);
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () =>
+  console.log(`Server running at http://localhost:${PORT}`)
+);
