@@ -56,6 +56,78 @@ Here, the deployment is done with Raillway, where it is just using a database.db
 
 ---
 
+## 📦 Database Schema (SQLite)
+
+This project uses **SQLite** (via `better-sqlite3`) as a lightweight, file-based database.  
+All tables are automatically created inside:./database.db
+
+
+Below is a full description of every table.
+
+---
+
+## 🧱 1. `coupons` Table  
+Stores the main coupon details.
+
+| Column              | Type     | Description |
+|--------------------|----------|-------------|
+| id                 | INTEGER (PK) | Auto-increment coupon ID |
+| code               | TEXT UNIQUE | Unique coupon code (e.g., `WELCOME100`) |
+| description        | TEXT     | Human-readable coupon description |
+| discountType       | TEXT     | Either `FLAT` or `PERCENT` |
+| discountValue      | REAL     | Flat amount or percent value |
+| maxDiscountAmount  | REAL     | Optional cap for % discounts |
+| startDate          | TEXT     | Coupon valid-from date |
+| endDate            | TEXT     | Coupon valid-until date |
+| usageLimitPerUser  | INTEGER  | Max times each user can use the coupon |
+| eligibility        | TEXT     | JSON backup of full eligibility conditions |
+| created_at         | TEXT     | Timestamp of when coupon was created |
+
+---
+
+## 👤 2. `coupon_user_attributes` Table  
+Stores **user-based eligibility rules**.
+
+| Column            | Type     | Description |
+|------------------|----------|-------------|
+| id               | INTEGER (PK) | Row ID |
+| coupon_id        | INTEGER (FK) | References `coupons.id` |
+| allowedUserTiers | TEXT     | JSON array of allowed tiers |
+| minLifetimeSpend | REAL     | Minimum historical spend |
+| minOrdersPlaced  | INTEGER  | Minimum number of past orders |
+| firstOrderOnly   | INTEGER  | 1 = true, 0 = false |
+| allowedCountries | TEXT     | JSON array of allowed countries |
+
+---
+
+## 🛒 3. `coupon_cart_attributes` Table  
+Stores **cart-based eligibility rules**.
+
+| Column               | Type     | Description |
+|---------------------|----------|-------------|
+| id                  | INTEGER (PK) | Row ID |
+| coupon_id           | INTEGER (FK) | References `coupons.id` |
+| minCartValue        | REAL     | Minimum cart value before discount |
+| applicableCategories| TEXT     | JSON array of allowed categories |
+| excludedCategories  | TEXT     | JSON array of banned categories |
+| minItemsCount       | INTEGER  | Minimum number of total cart items |
+
+---
+
+## 🔄 4. `user_coupon_usage` Table  
+Tracks **how many times each user has used each coupon**.
+
+| Column     | Type     | Description |
+|------------|----------|-------------|
+| id         | INTEGER (PK) | Row ID |
+| coupon_id  | INTEGER (FK) | References `coupons.id` |
+| user_id    | TEXT     | ID of the user |
+| timesUsed  | INTEGER  | How many times this user used this coupon |
+| UNIQUE(coupon_id, user_id) | Constraint | Ensures one row per (coupon, user) pair |
+
+
+---
+
 ## 🚀 How to Run Locally
 
 Demo Vido Link:
@@ -222,7 +294,7 @@ If you want to check the get all coupons api then it is here like this
 
 If you want to increment the number of times of the given user with the given coupon, then use the following endpoint
 
-**Endpoint**
+**Endpoint:**
 `POST https://anshumat-foundation-assignment-production.up.railway.app/api/increment-usage`
 
 With the following json body:
@@ -233,7 +305,7 @@ With the following json body:
   "couponId": 1
 }
 ```
-Remember, here the couponId should be correct.
+Remember, here the couponId should be of a coupon which is present in the database.
 
 **sample output***
 ```json
