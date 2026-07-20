@@ -1,361 +1,216 @@
-# Coupon Management
+# Coupon Management API
 
-## 📌 Project Overview
-This project implements a full Coupon Management System.  
-Users can create multiple coupons with detailed attributes such as:
+> An Express + SQLite assignment that creates rule-based coupons, finds the best coupon for a user and cart, and tracks per-user usage.
 
-- **discountType**
-- **discountValue**
-- **maxDiscountAmount**
-- **startDate**, **endDate**
-- **usageLimitPerUser**
-- **eligibility** (user-based conditions)
-  - allowedUserTiers
-  - minLifetimeSpend
-  - minOrdersPlaced
-  - firstOrderOnly
-  - allowedCountries
-- **cartEligibility** (cart-based conditions)
-  - minCartValue
-  - applicableCategories
-  - excludedCategories
-  - minItemsCount
+**[Watch the demo](https://drive.google.com/file/d/1sCfaXzlHHWeB5Jyt0SMKfAYaAyWRQY6N/view?usp=sharing)** · **[Open the deployed coupon list](https://anshumat-foundation-assignment-production.up.railway.app/api/coupons)**
 
-Also, users can **search for the best coupon** by providing:
+```mermaid
+flowchart LR
+    A[Admin creates coupon] --> DB[(SQLite)]
+    U[User + cart] --> E[Eligibility engine]
+    DB --> E
+    E --> R[Rank eligible coupons]
+    R --> B[Best coupon]
+    B --> T[Record usage]
+    T --> DB
+```
 
-- user details
-- cart details
+## What it does
 
-We also track **coupon usage per user**, ensuring a single user cannot exceed allowed usage limits.
+```mermaid
+flowchart TB
+    API((Coupon API))
+    API --> C[Create<br/>coupon + rules]
+    API --> L[List<br/>all coupons]
+    API --> F[Filter<br/>date, usage, user, cart]
+    API --> D[Calculate<br/>flat or percent discount]
+    API --> R[Rank<br/>discount → expiry → code]
+    API --> U[Track<br/>usage per user]
+```
 
-There is one more api for to get all coupons(just for testin purpose).
+## Documentation map
 
-### Main APIs
+| Guide | Visual focus |
+|---|---|
+| [Architecture](docs/architecture.md) | Layers, modules, request path, and repository map |
+| [Coupon selection](docs/coupon-selection.md) | Eligibility pipeline, discount formulas, and tie-breaks |
+| [API and data](docs/api-and-data.md) | Endpoints, payloads, schema, and relationships |
+| [Setup and verification](docs/setup-and-verification.md) | Local run, curl checks, Railway, and troubleshooting |
+| [What I learned](docs/what-i-learned.md) | Design lessons, limitations, and production hardening |
 
-#### ✅ Create Coupon API  
-Creates a coupon with fields:  
-`code, description, discountType, discountValue, maxDiscountAmount, startDate, endDate, usageLimitPerUser, eligibility{}, cartEligibility{}`
+```mermaid
+flowchart LR
+    R[README] --> A[Architecture]
+    R --> S[Selection logic]
+    R --> D[API + data]
+    R --> V[Setup + checks]
+    R --> L[Learning]
+```
 
-#### ✅ Best Coupon API  
-Takes **user** + **cart** input and returns the best applicable coupon.
+## API at a glance
 
-### Extra Utility APIs
-- Get all coupons (testing only)
-- Increment user usage for a coupon
+Base path: `/api`
 
----
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/createCoupon` | Create a coupon and its eligibility rules |
+| `GET` | `/coupons` | List coupons with user/cart rule rows |
+| `POST` | `/bestCoupons` | Return the highest-value eligible coupon |
+| `POST` | `/increment-usage` | Increment one user–coupon usage counter |
 
-## 🛠 Tech Stack
-- Node.js  
-- Express.js  
-- SQLite (SQL queries)  
-- Railway for deployment  
-- JavaScript
+```mermaid
+sequenceDiagram
+    actor Client
+    participant API as Express API
+    participant Rules as Selection engine
+    participant DB as SQLite
 
-Here, the deployment is done with Raillway, where it is just using a database.db file, along with the code, for implementing the database. With, every new deployment, this file gets wiped and a new file is created.
+    Client->>API: POST /api/bestCoupons
+    API->>DB: Read coupons and rules
+    DB-->>Rules: Coupon candidates
+    Rules->>Rules: Filter + calculate + rank
+    Rules-->>Client: bestCoupon or null
+    Client->>API: POST /api/increment-usage
+    API->>DB: Upsert usage count
+    API-->>Client: Success
+```
 
----
+> [!IMPORTANT]
+> Finding a coupon does **not** reserve or consume it. The client must call `/increment-usage` separately after the coupon is actually used.
 
-## 📦 Database Schema (SQLite)
+## Selection order
 
-This project uses **SQLite** (via `better-sqlite3`) as a lightweight, file-based database.  
-All tables are automatically created inside:./database.db
+```mermaid
+flowchart LR
+    A[All coupons] --> B[Active date]
+    B --> C[Usage available]
+    C --> D[User eligible]
+    D --> E[Cart eligible]
+    E --> F[Calculate discount]
+    F --> G[Highest discount]
+    G --> H[Earliest expiry]
+    H --> I[Alphabetical code]
+```
 
+## Data model
 
-Below is a full description of every table.
+```mermaid
+erDiagram
+    coupons ||--|| coupon_user_attributes : has
+    coupons ||--|| coupon_cart_attributes : has
+    coupons ||--o{ user_coupon_usage : records
 
----
+    coupons {
+      integer id PK
+      text code UK
+      text discountType
+      real discountValue
+      text startDate
+      text endDate
+      integer usageLimitPerUser
+    }
+    coupon_user_attributes {
+      integer coupon_id FK
+      text allowedUserTiers
+      real minLifetimeSpend
+      integer minOrdersPlaced
+      integer firstOrderOnly
+      text allowedCountries
+    }
+    coupon_cart_attributes {
+      integer coupon_id FK
+      real minCartValue
+      text applicableCategories
+      text excludedCategories
+      integer minItemsCount
+    }
+    user_coupon_usage {
+      integer coupon_id FK
+      text user_id
+      integer timesUsed
+    }
+```
 
-## 🧱 1. `coupons` Table  
-Stores the main coupon details.
+## Stack
 
-| Column              | Type     | Description |
-|--------------------|----------|-------------|
-| id                 | INTEGER (PK) | Auto-increment coupon ID |
-| code               | TEXT UNIQUE | Unique coupon code (e.g., `WELCOME100`) |
-| description        | TEXT     | Human-readable coupon description |
-| discountType       | TEXT     | Either `FLAT` or `PERCENT` |
-| discountValue      | REAL     | Flat amount or percent value |
-| maxDiscountAmount  | REAL     | Optional cap for % discounts |
-| startDate          | TEXT     | Coupon valid-from date |
-| endDate            | TEXT     | Coupon valid-until date |
-| usageLimitPerUser  | INTEGER  | Max times each user can use the coupon |
-| eligibility        | TEXT     | JSON backup of full eligibility conditions |
-| created_at         | TEXT     | Timestamp of when coupon was created |
+```mermaid
+flowchart LR
+    JS[JavaScript<br/>ES modules] --> N[Node.js 22]
+    N --> E[Express 5]
+    E --> S[better-sqlite3]
+    S --> DB[(database.db)]
+    E --> R[Railway]
+```
 
----
+## Quick start
 
-## 👤 2. `coupon_user_attributes` Table  
-Stores **user-based eligibility rules**.
-
-| Column            | Type     | Description |
-|------------------|----------|-------------|
-| id               | INTEGER (PK) | Row ID |
-| coupon_id        | INTEGER (FK) | References `coupons.id` |
-| allowedUserTiers | TEXT     | JSON array of allowed tiers |
-| minLifetimeSpend | REAL     | Minimum historical spend |
-| minOrdersPlaced  | INTEGER  | Minimum number of past orders |
-| firstOrderOnly   | INTEGER  | 1 = true, 0 = false |
-| allowedCountries | TEXT     | JSON array of allowed countries |
-
----
-
-## 🛒 3. `coupon_cart_attributes` Table  
-Stores **cart-based eligibility rules**.
-
-| Column               | Type     | Description |
-|---------------------|----------|-------------|
-| id                  | INTEGER (PK) | Row ID |
-| coupon_id           | INTEGER (FK) | References `coupons.id` |
-| minCartValue        | REAL     | Minimum cart value before discount |
-| applicableCategories| TEXT     | JSON array of allowed categories |
-| excludedCategories  | TEXT     | JSON array of banned categories |
-| minItemsCount       | INTEGER  | Minimum number of total cart items |
-
----
-
-## 🔄 4. `user_coupon_usage` Table  
-Tracks **how many times each user has used each coupon**.
-
-| Column     | Type     | Description |
-|------------|----------|-------------|
-| id         | INTEGER (PK) | Row ID |
-| coupon_id  | INTEGER (FK) | References `coupons.id` |
-| user_id    | TEXT     | ID of the user |
-| timesUsed  | INTEGER  | How many times this user used this coupon |
-| UNIQUE(coupon_id, user_id) | Constraint | Ensures one row per (coupon, user) pair |
-
-
----
-
-## 🚀 How to Run Locally
-
-Demo Vido Link:
-**https://drive.google.com/file/d/1sCfaXzlHHWeB5Jyt0SMKfAYaAyWRQY6N/view?usp=sharing**
-
-### 1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/SidheshwarSarangal/Anshumat-Foundation-Assignment.git
-```
-
-### 2️⃣ Move into Project
-```bash
 cd Anshumat-Foundation-Assignment
-```
-
-### 3️⃣ Install Dependencies
-```bash
 npm install
-```
-
-### 4️⃣ Start the Server
-```bash
 npm run dev
 ```
 
-Your server will run at:  
-**http://localhost:3000**
+The API starts at `http://localhost:3000` unless `PORT` is set. `database.db` is created automatically; use `DB_FILE` to choose another path.
 
----
-
-## 🌐 Deployed App
-
-Backend URL:  
-**https://anshumat-foundation-assignment-production.up.railway.app/**
-
----
-
-## 🔥 API Usage & Test Cases
-
-- You can run these in Postman or in ThunderClient.
-
-### 🧩 Create Coupon API
-
-**Endpoint:**  
-`POST http://localhost:3000/api/createCoupon`
-
-
-**Sample Request Body**
-```json
-{
-  "code": "REGULAR5555",
-  "description": "50 off for regular users on electronics and fashion",
-  "discountType": "FLAT",
-  "discountValue": 50,
-  "maxDiscountAmount": null,
-  "startDate": "2025-01-01",
-  "endDate": "2025-12-31",
-  "usageLimitPerUser": 5,
-
-  "eligibility": {
-    "allowedUserTiers": ["REGULAR", "GOLD"],
-    "minLifetimeSpend": 2000,
-    "minOrdersPlaced": 2,
-    "firstOrderOnly": false,
-    "allowedCountries": ["IN"]
-  },
-
-  "cartEligibility": {
-    "minCartValue": 500,
-    "applicableCategories": ["electronics", "fashion"],
-    "excludedCategories": [],
-    "minItemsCount": 1
-  }
-}
+```bash
+curl http://localhost:3000/api/coupons
 ```
 
-**Sample Output**
-```json
-{
-  "message": "Coupon created successfully",
-  "couponId": 1
-}
+See [Setup and verification](docs/setup-and-verification.md) for complete request examples.
+
+## Current boundaries
+
+| Implemented | Not currently implemented |
+|---|---|
+| Rule-based coupon creation | Authentication or admin authorization |
+| Date, usage, user, and cart checks | Schema-validation library |
+| Flat and capped-percent discounts | Transaction joining selection with redemption |
+| Deterministic best-coupon ranking | Automated test suite |
+| SQLite persistence | Durable Railway volume by default |
+
+<details>
+<summary><strong>Complete system view</strong></summary>
+
+```mermaid
+flowchart TB
+    Client[API client]
+
+    subgraph HTTP[Express server]
+        JSON[express.json]
+        Router[/api router]
+    end
+
+    subgraph Controllers[Coupon controllers]
+        Create[createCoupon]
+        List[getAllCoupons]
+        Best[getBestCoupon]
+        Usage[incrementCouponUsage]
+    end
+
+    subgraph Storage[SQLite database.db]
+        Coupons[(coupons)]
+        UserRules[(coupon_user_attributes)]
+        CartRules[(coupon_cart_attributes)]
+        UsageRows[(user_coupon_usage)]
+    end
+
+    Client --> JSON --> Router
+    Router --> Create
+    Router --> List
+    Router --> Best
+    Router --> Usage
+    Create --> Coupons
+    Create --> UserRules
+    Create --> CartRules
+    List --> Coupons
+    List --> UserRules
+    List --> CartRules
+    Best --> Coupons
+    Best --> UserRules
+    Best --> CartRules
+    Best --> UsageRows
+    Usage --> UsageRows
 ```
 
----
-
-### Best Coupon API
-
-**Endpoint:**  
-`POST http://localhost:3000/api/bestCoupons`
-
-**Sample Input**
-```json
-{
-  "user": {
-    "userTier": "REGULAR",
-    "country": "IN",
-    "lifetimeSpend": 2500,
-    "ordersPlaced": 3
-  },
-
-  "cart": {
-    "items": [
-      {
-        "id": 1,
-        "name": "Smartphone",
-        "unitPrice": 15000,
-        "quantity": 1,
-        "category": "electronics"
-      },
-      {
-        "id": 2,
-        "name": "T-Shirt",
-        "unitPrice": 800,
-        "quantity": 2,
-        "category": "fashion"
-      }
-    ]
-  }
-}
-```
-
-**Sample Output**
-```json
-{
-  "bestCoupon": {
-    "id": 1,
-    "code": "REGULAR20",
-    "discount": 50
-  }
-}
-```
-
----
-
-### Using Deployed API Instead of Local
-
-Just replace:
-
-```
-http://localhost:3000
-```
-
-with:
-
-```
-https://anshumat-foundation-assignment-production.up.railway.app
-```
-
-Example:
-
-- Create coupon:  
-  `https://anshumat-foundation-assignment-production.up.railway.app/api/createCoupon`
-
-- Get best coupon:  
-  `https://anshumat-foundation-assignment-production.up.railway.app/api/bestCoupons`
-
-The json body stays the same here for these two.
-
-If you want to check the get all coupons api then it is here like this
-
-**Endpoint:**  
-`GET http://anshumat-foundation-assignment-production.up.railway.app/api/coupons`
-
-If you want to increment the number of times of the given user with the given coupon, then use the following endpoint
-
-**Endpoint:**
-`POST https://anshumat-foundation-assignment-production.up.railway.app/api/increment-usage`
-
-With the following json body:
-
-```json
-{
-  "userId": 1,
-  "couponId": 1
-}
-```
-Remember, here the couponId should be of a coupon which is present in the database.
-
-**sample output***
-```json
-{
-  "message": "Coupon usage incremented successfully"
-}
-```
-
----
-
-## AI Usage
-AI was used for:
-
-- Understanding deployment errors on Railway (especially SQLite native module build issues)
-- Fixing Node version mismatch, module rebuild, and debugging during deployment
-- Understanding that Railway will embed the local `.db` file along with the code
-- Understanding implemention and usage of SQLite with Express
-- Checking and imrpoving DB schema according to problem statement complexity 
-- Refining the presentation of the final readme document
-
-### 📌 Prompts Used
-
-1. **Railway Deployment & SQLite Issues**
-   - “Railway keeps throwing this error: `better_sqlite3.node was compiled against NODE_MODULE_VERSION 115 but the current Node version requires 127`.  
-     I already deleted node_modules and reinstalled but it still fails during deployment.  
-     What EXACT steps should I follow so that better-sqlite3 builds correctly on Railway?”
-
-   - “Railway logs show ‘Application failed to respond’. My server works perfectly on localhost.  
-     Is this because SQLite isn't loading? How do I debug this in a Railway container environment?”
-
-2. **Fixing SQLite Build**
-   - “Give me the correct Dockerfile or environment variables so that Railway installs better-sqlite3 correctly without node-gyp errors.”
-
-   - “Why does better-sqlite3 fail when Node.js version changes? Explain NODE_MODULE_VERSION mismatch and how to rebuild native modules properly.”
-
-3. **Database Schema & Logic**
-   - “Here is my coupon schema. Am I structuring eligibility rules correctly?  
-     Should I store user- and cart-eligibility in separate tables or JSON columns?”
-
-4. **Best Coupon Selection Logic**
-   - “Here is my bestCoupons controller. Why is it returning the wrong coupon? Show me the step-by-step filtering logic.”
-
-5. **Debugging**
-   - “When I run on Railway I get: `Server running at http://localhost:8080` but the public URL still gives 502.  
-     What does this mean? Do I need to bind to 0.0.0.0 or use process.env.PORT?”
-
-6. **Writing the README**
-   - “Rewrite my entire README to be clean, professional, formatted properly, and aligned with the assignment requirements.  
-
-   - “Generate a full technical explanation for each database table in Markdown with proper formatting.”
-
----
-
+</details>
