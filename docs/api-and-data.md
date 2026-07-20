@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    Client -->|JSON| API[/api]
+    Client -->|JSON| API["/api"]
     API --> C[(coupons)]
     API --> U[(user rules)]
     API --> A[(cart rules)]

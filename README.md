@@ -178,7 +178,7 @@ flowchart TB
 
     subgraph HTTP[Express server]
         JSON[express.json]
-        Router[/api router]
+        Router["/api router"]
     end
 
     subgraph Controllers[Coupon controllers]

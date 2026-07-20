@@ -36,7 +36,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    API[/api]
+    API["/api"]
     API --> CC[POST /createCoupon]
     API --> GC[GET /coupons]
     API --> BC[POST /bestCoupons]
